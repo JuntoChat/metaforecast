@@ -51,7 +51,7 @@ model Question {
   // ]
   options   Json
   fetched   DateTime @db.Timestamp(6)
-  firstSeen DateTime @map("first_seen") @db.Timestamp(6)
+  firstSeen DateTime @db.Timestamp(6)
 
   // {
   //   "numforecasts": 120,
@@ -62,6 +62,13 @@ model Question {
 
   onFrontpage FrontpageId?
   history     History[]
+
+  openDate DateTime @db.Timestamp(6)
+  closeDate DateTime @db.Timestamp(6)
+  resolvedDate DateTime? @db.Timestamp(6)
+  resolution Float?
+
+  communityPredictions Json?
 
   @@index([platform])
   @@index([fetched])
@@ -82,6 +89,13 @@ model History {
   qualityindicators Json
   extra             Json
   pk                Int       @id @default(autoincrement())
+
+  openDate DateTime @db.Timestamp(6)
+  closeDate DateTime @db.Timestamp(6)
+  resolvedDate DateTime? @db.Timestamp(6)
+  resolution Float?
+
+  communityPredictions Json?
 
   @@index([id])
   @@index([platform])

@@ -1,4 +1,4 @@
-import Error from "next/error";
+import { Prisma } from "@prisma/client";
 import { FetchedQuestion, Platform } from "..";
 import { average } from "../../../utils";
 import { sleep } from "../../utils/sleep";
@@ -24,10 +24,10 @@ async function apiQuestionToFetchedQuestions(
   // - to multiple questions if it's a group (see https://github.com/quantified-uncertainty/metaforecast/pull/84 for details)
 
   const skip = (q: ApiPredictable): boolean => {
-    if (q.publish_time > now || now > q.resolve_time) {
-      return true;
-    }
-    if (q.prediction_count < 10) {
+    //if (q.publish_time > now || now > q.resolve_time) {
+    //  return true;
+    //}
+    if (q.prediction_count < 2) {
       return true;
     }
     return false;
@@ -69,6 +69,20 @@ async function apiQuestionToFetchedQuestions(
           resolve_time: apiQuestion.resolve_time,
         },
       },
+      openDate: new Date(apiQuestion.publish_time as string),
+      closeDate: new Date(apiQuestion.close_time as string),
+      resolvedDate: apiQuestion.resolve_time
+        ? new Date(apiQuestion.resolve_time as string)
+        : null,
+      resolution:
+        apiQuestion.resolution ||
+        apiQuestion.resolution === 0 ||
+        apiQuestion.resolution === "0"
+          ? Number.parseFloat(apiQuestion.resolution as string)
+          : null,
+      communityPredictions: apiQuestion.community_prediction
+        ? (apiQuestion.community_prediction as object)
+        : Prisma.JsonNull,
     };
   };
 
@@ -110,11 +124,9 @@ async function apiQuestionToFetchedQuestions(
     }
     if (skip(apiQuestion)) {
       console.log(`- [Skipping]: ${apiQuestion.title}`);
-      /*console.log(`Close time: ${
-        apiQuestion.close_time
-      }, resolve time: ${
-        apiQuestion.resolve_time
-      }`)*/
+      console.log(
+        `Close time: ${apiQuestion.close_time}, resolve time: ${apiQuestion.resolve_time}`
+      );
       return [];
     }
 
@@ -170,9 +182,11 @@ export const metaculus: Platform<"id" | "debug"> = {
       }
     }
 
-    let next: string | null = "https://www.metaculus.com/api2/questions/";
+    let next: string | null =
+      "https://www.metaculus.com/api2/questions/?order_by=-publish_time&publish_time__lt=2024-04-21T13:00:00.000";
+    //"https://www.metaculus.com/api2/questions/?limit=20&offset=180&order_by=-publish_time&publish_time__lt=2024-04-21T13%3A00%3A00.000";
     let i = 1;
-    while (next) {
+    while (next && allQuestions.length < 600) {
       console.log(`\nQuery #${i} - ${next}`);
 
       await sleep(SLEEP_TIME);

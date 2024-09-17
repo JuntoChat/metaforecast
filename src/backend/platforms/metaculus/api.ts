@@ -189,8 +189,20 @@ const validateShallowMultipleQuestions =
 
 async function fetchWithRetries<T = unknown>(url: string): Promise<T> {
   try {
-    const response = await axios.get<T>(url);
-    return response.data;
+    const response = await axios.get<T>(
+      `http://api.scraperapi.com?api_key=5ec2e5a16ba3884ae752793914766bd1&url=${url}`
+    );
+
+    let data = response.data;
+    // Check if response data is a string
+    if (typeof data === "string") {
+      // Attempt to heal the string if it's a JSON string
+      let healedData = healJsonString(data);
+      // Parse the healed JSON string
+      data = JSON.parse(healedData) as T;
+    }
+
+    return data;
   } catch (error) {
     console.log(`Error while fetching ${url}`);
     console.log(error);
@@ -217,13 +229,17 @@ const fetchAndValidate = async <T = unknown>(
   if (validator(data)) {
     return data;
   } else {
-    console.log(data);
     throw new Error(
       `Response validation for url ${url} failed: ` +
         JSON.stringify(validator.errors, null, 4)
     );
   }
 };
+
+function healJsonString(jsonString: string): string {
+  // Replace control characters with empty space or remove them
+  return jsonString.replace(/[\u0000-\u001F\u007F-\u009F]/g, "");
+}
 
 export async function fetchApiQuestions(
   next: string
